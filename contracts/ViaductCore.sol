@@ -8,9 +8,12 @@ import "hardhat/console.sol";
 /// @notice This contract can be trustlessly deployed on any EVM chain.
 contract ViaductCore {
     // === INITIALIZATION ===
+
+    uint256 constant supply = 10000000000000000000000;
+
     constructor(bool _isRoot, uint256 _genesisTimestamp, bool _forTesting) {
         if(_isRoot) {
-            balances[msg.sender] = 10000000000000000000000; // 10,000
+            balances[msg.sender] = supply;
         }
         alwaysCanPropose = _forTesting;
         genesisTimestamp = _genesisTimestamp;
@@ -31,7 +34,7 @@ contract ViaductCore {
     }
 
     function totalSupply() public pure returns (uint256) {
-        return 10000000000000000000000;
+        return supply;
     }
 
     function balanceOf(address _owner) public view returns (uint256) {
@@ -50,7 +53,7 @@ contract ViaductCore {
 
     // === CONSENSUS ===
 
-    /// @notice A transfer recorded by this deployment.
+    /// @notice A transfer recorded by this deployment. Erased after challenge window closes.
     struct Transfer {
         address from;
         address to;
@@ -64,15 +67,15 @@ contract ViaductCore {
     Transfer[] challengeableTransfers;
 
     /// @notice Beginning of the genesis window.
-    uint256 genesisTimestamp;
+    uint256 immutable genesisTimestamp;
     /// @notice Length of each challenge window, in seconds.
-    uint256 challengeWindowLength = 10 * 60;
+    uint256 constant challengeWindowLength = 10 * 60;
     /// @notice Length of the proposal period, in seconds.
-    uint256 proposalLength = 7 * 60;
+    uint256 constant proposalLength = 7 * 60;
     /// @notice Length of the challenge-only period, in seconds.
-    uint256 challengeOnlyLength = 3 * 60;
+    uint256 constant challengeOnlyLength = 3 * 60;
     /// @notice When set to true, canPropose() always returns true
-    bool alwaysCanPropose;
+    bool immutable alwaysCanPropose;
 
     function canPropose() public view returns (bool) {
         uint256 windowTime = (block.timestamp - genesisTimestamp) % challengeWindowLength;
@@ -158,7 +161,7 @@ contract ViaductCore {
     function verify(
         address _signer,
         bytes32 _hash,
-        bytes memory _signature
+        bytes calldata _signature
     ) public pure returns (bool) {
         return recoverSigner(_hash, _signature) == _signer;
     }
@@ -166,7 +169,7 @@ contract ViaductCore {
     /// @notice Recovers the signer from a signature.
     function recoverSigner(
         bytes32 _signedMessageHash,
-        bytes memory _signature
+        bytes calldata _signature
     ) public pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
 
@@ -195,7 +198,7 @@ contract ViaductCore {
     /// @notice Verifies a signature for a transfer
     function verifyTransfer(
         Transfer memory _transfer,
-        bytes memory _signature
+        bytes calldata _signature
     ) public pure returns (bool) {
         bytes32 messageHash = getValidHash(_transfer.from, _transfer.to, _transfer.amount, _transfer.nonce);
         bytes32 signedMessageHash = calculateSignedMessageHash(messageHash);
@@ -212,7 +215,7 @@ contract ViaductCore {
         uint256 _value,
         uint256 _nonce
     ) public pure returns (bytes32 messageHash) {
-        bytes memory message = abi.encodePacked("LightLink Signed Message: FROM ", _from, " TO ", _to, " VALUE ", _value, " NONCE ", _nonce);
+        bytes memory message = abi.encodePacked("Viaduct Signed Message: FROM ", _from, " TO ", _to, " VALUE ", _value, " NONCE ", _nonce);
         messageHash = keccak256(message);
     }
 
@@ -221,9 +224,9 @@ contract ViaductCore {
         address _from,
         address _to,
         uint256 _value,
-        bytes memory _sig,
+        bytes calldata _sig,
         uint256 _nonce
-    ) public returns (bool success) {
+    ) external returns (bool success) {
         require(canPropose(), "Cannot propose");
         require(balances[_from] >= _value, "Insufficient balance");
         Transfer memory activeTransfer;

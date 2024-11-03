@@ -41,7 +41,7 @@ describe("Viaduct Core", function () {
         const pendingTransferCount = await bridge.pendingTransferCount();
         expect(pendingTransferCount).to.equal(1);
 
-        await time.increase(3000);
+        await time.increase(600);
 
         await bridge.cleanChallengeWindow();
 
