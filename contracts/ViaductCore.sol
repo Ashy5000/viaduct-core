@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-
 /// @title Viaduct core contract
 /// @author Asher Wrobel
 /// @notice This contract can be trustlessly deployed on any EVM chain.
