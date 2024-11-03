@@ -206,6 +206,8 @@ contract ViaductCore {
 
     // === TRANSACTIONS ===
 
+    mapping(uint256 => bool) usedNonces;
+
     /// @notice Creates a correct message hash given transfer parameters.
     function getValidHash(
         address _from,
@@ -225,6 +227,8 @@ contract ViaductCore {
         bytes calldata _sig,
         uint256 _nonce
     ) external returns (bool success) {
+        require(!usedNonces[_nonce], "Nonce already used.");
+        usedNonces[_nonce] = true;
         require(canPropose(), "Cannot propose");
         require(balances[_from] >= _value, "Insufficient balance");
         Transfer memory activeTransfer;

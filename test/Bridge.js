@@ -7,7 +7,11 @@ describe("Viaduct Core", function () {
     async function deployFixture() {
         const [owner, dst] = await ethers.getSigners();
 
-        const bridge = await ethers.deployContract("ViaductCore", [true, 0, true]);
+        // const bridge = await ethers.deployContract("ViaductCore", [true, 0, true]);
+        const ViaductCore = await ethers.getContractFactory("ViaductCore");
+        const bridge = ViaductCore.attach(
+            "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+        );
 
         return {owner, bridge, dst};
     }
@@ -22,7 +26,9 @@ describe("Viaduct Core", function () {
     it("Should generate correct signature hashes", async function () {
         const { owner, bridge, dst } = await loadFixture(deployFixture);
 
-        const hash = await bridge.getValidHash(owner, dst, 100, 0);
+        const nonce = Math.floor(Math.random() * 10000);
+
+        const hash = await bridge.getValidHash(owner, dst, 100, nonce);
 
         expect(hash).to.not.be.null;
         expect(hash).to.not.be.undefined;
@@ -31,19 +37,21 @@ describe("Viaduct Core", function () {
     it("Should correctly perform objective transfers", async function () {
         const { owner, bridge, dst } = await loadFixture(deployFixture);
 
-        const hash = await bridge.getValidHash(owner, dst, 1, 1);
+        const nonce = Math.floor(Math.random() * 10000);
+
+        const hash = await bridge.getValidHash(owner, dst, 1, nonce);
         const arr = ethers.getBytes(hash);
         const sig = await owner.signMessage(arr);
         const signedMsgHash = await bridge.calculateSignedMessageHash(arr);
         const isValid = await bridge.verify(owner, signedMsgHash, sig);
-        await bridge.objectiveTransfer(owner, dst, 1, sig, 1);
+        await bridge.objectiveTransfer(owner, dst, 1, sig, nonce);
 
         const pendingTransferCount = await bridge.pendingTransferCount();
         expect(pendingTransferCount).to.equal(1);
 
         await time.increase(600);
 
-        await bridge.cleanChallengeWindow();
+        await new Promise(resolve => setTimeout(resolve, 10 * 1000));
 
         const cleanedPendingTransferCount = await bridge.pendingTransferCount();
         expect(cleanedPendingTransferCount).to.equal(0);

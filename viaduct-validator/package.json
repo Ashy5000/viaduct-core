@@ -1,0 +1,15 @@
+{
+  "name": "viaduct-validator",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Asher Wrobel",
+  "license": "GPL-3.0-or-later",
+  "description": "",
+  "dependencies": {
+    "ethers": "^6.13.4"
+  },
+  "type": "module"
+}
