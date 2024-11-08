@@ -56,6 +56,7 @@ contract ViaductCore {
         address from;
         address to;
         uint256 amount;
+        bytes sig;
         uint256 nonce;
         uint256 timestamp;
         bool problematic;
@@ -103,24 +104,25 @@ contract ViaductCore {
     uint[] problematicIndices;
     Transfer[] problematicTransfers;
 
-    function tryChallenge(Transfer memory _conflictingTransfer) public returns (bool) {
-        uint256 totalSpent = 0;
+    function tryChallenge(address _from, uint256 _amount) public returns (bool) {
+        uint256 totalSpent = _amount;
         for (uint i; i < challengeableTransfers.length; i++) {
-            if(challengeableTransfers[i].from == _conflictingTransfer.from) {
+            if(challengeableTransfers[i].from == _from) {
                 totalSpent += challengeableTransfers[i].amount;
                 problematicTransfers.push(challengeableTransfers[i]);
                 problematicIndices.push(i);
             }
         }
-        if(balances[_conflictingTransfer.from] > totalSpent) {
+        if(balances[_from] > totalSpent) {
             // No conflict.
             return false;
         }
         // Challenge success!
         for (uint i; i < problematicIndices.length; i++) {
-            challengeableTransfers[problematicIndices[i]].problematic = true;
+            Transfer memory t = challengeableTransfers[problematicIndices[i]];
+            t.problematic = true;
+            emit ChallengedTransfer(t.from, t.to, t.amount, t.sig, t.nonce);
         }
-        emit ChallengedTransfer(problematicTransfers);
         return true;
     }
 
@@ -128,8 +130,8 @@ contract ViaductCore {
         return challengeableTransfers.length;
     }
 
-    /// @notice Emitted when a transfer causes double-spending. Contains all problematic transfers.
-    event ChallengedTransfer(Transfer[] problematicTransfers);
+    /// @notice Emitted when a transfer causes double-spending.
+    event ChallengedTransfer(address _from, address _to, uint256 _value, bytes _sig, uint256 nonce);
 
     // === ACCOUNTING ===
 
@@ -159,7 +161,7 @@ contract ViaductCore {
     function verify(
         address _signer,
         bytes32 _hash,
-        bytes calldata _signature
+        bytes memory _signature
     ) public pure returns (bool) {
         return recoverSigner(_hash, _signature) == _signer;
     }
@@ -167,7 +169,7 @@ contract ViaductCore {
     /// @notice Recovers the signer from a signature.
     function recoverSigner(
         bytes32 _signedMessageHash,
-        bytes calldata _signature
+        bytes memory _signature
     ) public pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
 
@@ -196,7 +198,7 @@ contract ViaductCore {
     /// @notice Verifies a signature for a transfer
     function verifyTransfer(
         Transfer memory _transfer,
-        bytes calldata _signature
+        bytes memory _signature
     ) public pure returns (bool) {
         bytes32 messageHash = getValidHash(_transfer.from, _transfer.to, _transfer.amount, _transfer.nonce);
         bytes32 signedMessageHash = calculateSignedMessageHash(messageHash);
@@ -224,7 +226,7 @@ contract ViaductCore {
         address _from,
         address _to,
         uint256 _value,
-        bytes calldata _sig,
+        bytes memory _sig,
         uint256 _nonce
     ) external returns (bool success) {
         require(!usedNonces[_nonce], "Nonce already used.");
@@ -235,11 +237,12 @@ contract ViaductCore {
         activeTransfer.from = _from;
         activeTransfer.to = _to;
         activeTransfer.amount = _value;
+        activeTransfer.sig = _sig;
         activeTransfer.nonce = _nonce;
         activeTransfer.timestamp = block.timestamp;
         require(verifyTransfer(activeTransfer, _sig), "Invalid signature");
         activeTransfer.problematic = false;
-        if(tryChallenge(activeTransfer)) {
+        if(tryChallenge(activeTransfer.from, activeTransfer.amount)) {
             activeTransfer.problematic = true;
         }
         challengeableTransfers.push(activeTransfer);

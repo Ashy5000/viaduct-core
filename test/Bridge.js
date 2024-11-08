@@ -13,6 +13,10 @@ describe("Viaduct Core", function () {
             "0x5FbDB2315678afecb367f032d93F642f64180aa3"
         );
 
+        // Upkeep
+        await time.increase(600);
+        await bridge.cleanChallengeWindow();
+
         return {owner, bridge, dst};
     }
 
@@ -43,7 +47,6 @@ describe("Viaduct Core", function () {
         const arr = ethers.getBytes(hash);
         const sig = await owner.signMessage(arr);
         const signedMsgHash = await bridge.calculateSignedMessageHash(arr);
-        const isValid = await bridge.verify(owner, signedMsgHash, sig);
         await bridge.objectiveTransfer(owner, dst, 1, sig, nonce);
 
         const pendingTransferCount = await bridge.pendingTransferCount();
@@ -55,5 +58,5 @@ describe("Viaduct Core", function () {
 
         const cleanedPendingTransferCount = await bridge.pendingTransferCount();
         expect(cleanedPendingTransferCount).to.equal(0);
-    })
+    });
 });
