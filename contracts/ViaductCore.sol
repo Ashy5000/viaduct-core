@@ -104,7 +104,7 @@ contract ViaductCore {
     uint[] problematicIndices;
     Transfer[] problematicTransfers;
 
-    function tryChallenge(address _from, uint256 _amount) public returns (bool) {
+    function tryChallenge(address _from, uint256 _amount) internal returns (bool) {
         uint256 totalSpent = _amount;
         for (uint i; i < challengeableTransfers.length; i++) {
             if(challengeableTransfers[i].from == _from) {
@@ -124,6 +124,28 @@ contract ViaductCore {
             emit ChallengedTransfer(t.from, t.to, t.amount, t.sig, t.nonce);
         }
         return true;
+    }
+
+    function challengeAndRecord(
+        address _from,
+        address _to,
+        uint256 _value,
+        bytes memory _sig,
+        uint256 _nonce
+    ) external returns (bool success) {
+        Transfer memory activeTransfer;
+        activeTransfer.from = _from;
+        activeTransfer.to = _to;
+        activeTransfer.amount = _value;
+        activeTransfer.sig = _sig;
+        activeTransfer.nonce = _nonce;
+        activeTransfer.timestamp = block.timestamp;
+        activeTransfer.problematic = true;
+        require(verifyTransfer(activeTransfer, _sig), "Invalid signature");
+        require(tryChallenge(_from, _value), "Challenge unsuccessful");
+        challengeableTransfers.push(activeTransfer);
+        cleanChallengeWindow();
+        success = true;
     }
 
     function pendingTransferCount() public view returns (uint256) {
@@ -242,7 +264,7 @@ contract ViaductCore {
         activeTransfer.timestamp = block.timestamp;
         require(verifyTransfer(activeTransfer, _sig), "Invalid signature");
         activeTransfer.problematic = false;
-        if(tryChallenge(activeTransfer.from, activeTransfer.amount)) {
+        if(tryChallenge(_from, _value)) {
             activeTransfer.problematic = true;
         }
         challengeableTransfers.push(activeTransfer);

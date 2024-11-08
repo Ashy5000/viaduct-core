@@ -86,7 +86,7 @@ for(let i = 0; i < coreAddresses.length; i++) {
         console.log("   ❉ Relaying...");
         for(let j = 0; j < contracts.length; j++) {
             try {
-                const tx = await contracts[j].objectiveTransfer(_from, _to, _value, _sig, _nonce);
+                const tx = await contracts[j].challengeAndRecord(_from, _to, _value, _sig, _nonce);
                 await tx.wait();
             } catch (error) {
                 console.log("• Skipped (repeated nonce).");
