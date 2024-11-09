@@ -59,4 +59,33 @@ describe("Viaduct Core", function () {
         const cleanedPendingTransferCount = await bridge.pendingTransferCount();
         expect(cleanedPendingTransferCount).to.equal(0);
     });
+
+    it("Should block same-deployment double-spending", async function () {
+        const { owner, bridge, dst } = await loadFixture(deployFixture);
+
+        const ownerBalance = await bridge.balanceOf(owner);
+
+        const nonce = Math.floor(Math.random() * 10000);
+        const nonce2 = nonce + 1;
+
+        const hash = await bridge.getValidHash(owner, dst, 1, nonce);
+        const arr = ethers.getBytes(hash);
+        const sig = await owner.signMessage(arr);
+        const signedMsgHash = await bridge.calculateSignedMessageHash(arr);
+        await bridge.objectiveTransfer(owner, dst, 1, sig, nonce);
+
+
+        const hash2 = await bridge.getValidHash(owner, dst, ownerBalance, nonce2);
+        const arr2 = await ethers.getBytes(hash2);
+        const sig2 = await owner.signMessage(arr2);
+        const signedMsgHash2 = await bridge.calculateSignedMessageHash(arr2);
+        await bridge.objectiveTransfer(owner, dst, ownerBalance, sig2, nonce2);
+
+        await time.increase(600);
+
+        await new Promise(resolve => setTimeout(resolve, 10 * 1000));
+
+        const finalBalance = await bridge.balanceOf(owner);
+        expect(finalBalance).to.equal(ownerBalance);
+    });
 });
