@@ -56,7 +56,7 @@ for(let i = 0; i < coreAddresses.length; i++) {
                 const tx = await contracts[j].objectiveTransfer(_from, _to, _value, _sig, _nonce);
                 await tx.wait();
             } catch (error) {
-                console.log("• Skipped (repeated nonce).");
+                console.log("• Skipped (repeated tx).");
             }
         }
         // Then, clean. Not strictly necessary to perform every transfer but helps maintain high TPS.
@@ -89,7 +89,7 @@ for(let i = 0; i < coreAddresses.length; i++) {
                 const tx = await contracts[j].challengeAndRecord(_from, _to, _value, _sig, _nonce);
                 await tx.wait();
             } catch (error) {
-                console.log("• Skipped (repeated nonce).");
+                console.log("• Skipped (repeated tx).");
             }
         }
         // Then, clean. Not strictly necessary to perform every challenge but helps maintain high TPS.

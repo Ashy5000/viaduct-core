@@ -133,6 +133,8 @@ contract ViaductCore {
         bytes memory _sig,
         uint256 _nonce
     ) external returns (bool success) {
+        bytes32 hash = getValidHash(_from, _to, _value, _nonce);
+        require(!usedHashes[hash], "Repeated transaction.");
         Transfer memory activeTransfer;
         activeTransfer.from = _from;
         activeTransfer.to = _to;
@@ -230,7 +232,7 @@ contract ViaductCore {
 
     // === TRANSACTIONS ===
 
-    mapping(uint256 => bool) usedNonces;
+    mapping(bytes32 => bool) usedHashes;
 
     /// @notice Creates a correct message hash given transfer parameters.
     function getValidHash(
@@ -251,8 +253,9 @@ contract ViaductCore {
         bytes memory _sig,
         uint256 _nonce
     ) external returns (bool success) {
-        require(!usedNonces[_nonce], "Nonce already used.");
-        usedNonces[_nonce] = true;
+        bytes32 hash = getValidHash(_from, _to, _value, _nonce);
+        require(!usedHashes[hash], "Repeated transaction.");
+        usedHashes[hash] = true;
         require(canPropose(), "Cannot propose");
         require(balances[_from] >= _value, "Insufficient balance");
         Transfer memory activeTransfer;
